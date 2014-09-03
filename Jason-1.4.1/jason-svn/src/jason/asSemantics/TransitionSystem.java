@@ -1333,6 +1333,7 @@ public class TransitionSystem {
     
     
     public boolean reasoningCycle() {
+        //System.out.println("Begin of cycle");
         if (logger.isLoggable(Level.FINE)) logger.fine("Start new reasoning cycle");
         getUserAgArch().reasoningCycleStarting();
         
@@ -1376,6 +1377,7 @@ public class TransitionSystem {
             if (nrcslbr >= setts.nrcbp()) { 
                 nrcslbr = 0;
                 ag.buf(getUserAgArch().perceive());
+                //System.out.println("Perceived");
                 getUserAgArch().checkMail();
             }
             nrcslbr++; // counting number of cycles since last belief revision
@@ -1428,6 +1430,7 @@ public class TransitionSystem {
             conf.C.create();
         }
         
+        //System.out.println("End of cycle");
         return true;
     }
 
