@@ -8,7 +8,7 @@
 /* Initial beliefs and rules */
 
 pos(1,1).            // my initial location
-orientation(east).   // and orientation 
+orientation(east).   // and orientation
 
 // scenario borders
 // borders(BottomLeftX, BottomLeftY, TopRightX, TopRightY) 

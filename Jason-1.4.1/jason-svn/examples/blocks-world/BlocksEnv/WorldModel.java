@@ -83,9 +83,9 @@ public class WorldModel extends GridWorldModel {
             logger.info("Didn't find one of the blocks on top of a stack");
             return false;
         }
-        adds.add("on("+aS.peek()+","+bS.peek()+")");
+        adds.add("on("+aS.peek()+","+bS.peek()+")[priority(5)]");
         bS.push(aS.pop());
-        dels.add("on("+bS.peek()+","+aS.peek()+")");
+        dels.add("on("+bS.peek()+","+aS.peek()+")[priority(5)]");
         if (aS.peek().equals("table")) {
             stackList.remove(aS);
         }

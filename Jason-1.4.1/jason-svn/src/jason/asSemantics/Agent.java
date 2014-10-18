@@ -20,7 +20,6 @@
 // http://www.das.ufsc.br/~jomi
 //
 //----------------------------------------------------------------------------
-
 package jason.asSemantics;
 
 import jason.JasonException;
@@ -30,10 +29,12 @@ import jason.architecture.MindInspectorWeb;
 import jason.asSyntax.ASSyntax;
 import jason.asSyntax.ArithFunctionTerm;
 import jason.asSyntax.InternalActionLiteral;
+import jason.asSyntax.ListTerm;
 import jason.asSyntax.Literal;
 import jason.asSyntax.LogicalFormula;
 import jason.asSyntax.Plan;
 import jason.asSyntax.PlanLibrary;
+import jason.asSyntax.Pred;
 import jason.asSyntax.Rule;
 import jason.asSyntax.Term;
 import jason.asSyntax.Trigger;
@@ -79,59 +80,60 @@ import javax.xml.parsers.DocumentBuilderFactory;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 
-
-
 /**
- * The Agent class has the belief base and plan library of an
- * AgentSpeak agent. It also implements the default selection
- * functions of the AgentSpeak semantics.
+ * The Agent class has the belief base and plan library of an AgentSpeak agent.
+ * It also implements the default selection functions of the AgentSpeak
+ * semantics.
  */
 public class Agent {
 
     // Members
-    protected BeliefBase       bb = null;
-    protected PlanLibrary      pl = null;
+    protected BeliefBase bb = null;
+    protected PlanLibrary pl = null;
     protected TransitionSystem ts = null;
-    protected String           aslSource = null;
-    
-    private List<Literal>      initialGoals = null; // initial goals in the source code
-    private List<Literal>      initialBels  = null; // initial beliefs in the source code
+    protected String aslSource = null;
+
+    private List<Literal> initialGoals = null; // initial goals in the source code
+    private List<Literal> initialBels = null; // initial beliefs in the source code
+
+    private int priorityLimit = Integer.MAX_VALUE;
+    private boolean usingPriority = false;
 
     private Map<String, InternalAction> internalActions = null;
-    private Map<String, ArithFunction>  functions       = null;
-    
+    private Map<String, ArithFunction> functions = null;
+
     private boolean hasCustomSelOp = true;
-    
-    private ScheduledExecutorService scheduler = null; 
+
+    private ScheduledExecutorService scheduler = null;
 
     //private QueryCache qCache = null;
     private QueryCacheSimple qCache = null;
-    private QueryProfiling    qProfiling = null;
-    
+    private QueryProfiling qProfiling = null;
+
     protected Logger logger = Logger.getLogger(Agent.class.getName());
 
     public Agent() {
         checkCustomSelectOption();
     }
-    
+
     /**
      * Setup the default agent configuration.
-     * 
-     * Creates the agent class defined by <i>agClass</i>, default is jason.asSemantics.Agent. 
-     * Creates the TS for the agent.
-     * Creates the belief base for the agent. 
+     *
+     * Creates the agent class defined by <i>agClass</i>, default is
+     * jason.asSemantics.Agent. Creates the TS for the agent. Creates the belief
+     * base for the agent.
      */
     public static Agent create(AgArch arch, String agClass, ClassParameters bbPars, String asSrc, Settings stts) throws JasonException {
         try {
             Agent ag = (Agent) Class.forName(agClass).newInstance();
-            
+
             new TransitionSystem(ag, null, stts, arch);
 
             BeliefBase bb = (BeliefBase) Class.forName(bbPars.getClassName()).newInstance();
             ag.setBB(bb);     // the agent's BB have to be already set for the BB initialisation
             ag.initAg();
 
-            bb.init(ag, bbPars.getParametersArray());  
+            bb.init(ag, bbPars.getParametersArray());
             ag.load(asSrc); // load the source code of the agent
             return ag;
         } catch (Exception e) {
@@ -139,36 +141,57 @@ public class Agent {
         }
     }
 
-
-
-    /** Initialises the TS and other components of the agent */
+    /**
+     * Initialises the TS and other components of the agent
+     */
     public void initAg() {
-        if (bb == null) bb = new DefaultBeliefBase();
-        if (pl == null) pl = new PlanLibrary();
-        
-        if (initialGoals == null) initialGoals = new ArrayList<Literal>();
-        if (initialBels  == null) initialBels  = new ArrayList<Literal>(); 
+        if (bb == null) {
+            bb = new DefaultBeliefBase();
+        }
+        if (pl == null) {
+            pl = new PlanLibrary();
+        }
 
-        if (internalActions == null) internalActions = new HashMap<String, InternalAction>();
+        if (initialGoals == null) {
+            initialGoals = new ArrayList<Literal>();
+        }
+        if (initialBels == null) {
+            initialBels = new ArrayList<Literal>();
+        }
+
+        if (internalActions == null) {
+            internalActions = new HashMap<String, InternalAction>();
+        }
         initDefaultFunctions();
-        
-        if (ts == null) ts = new TransitionSystem(this, null, null, new AgArch());
-        
+
+        if (ts == null) {
+            ts = new TransitionSystem(this, null, null, new AgArch());
+        }
+
         //if (ts.getSettings().hasQueryCache()) qCache = new QueryCache(this);
-        if (ts.getSettings().hasQueryProfiling()) qProfiling = new QueryProfiling(this);
-        if (ts.getSettings().hasQueryCache())     qCache = new QueryCacheSimple(this, qProfiling);
-        
-        if (! "false".equals(Config.get().getProperty(Config.START_WEB_MI))) MindInspectorWeb.get().registerAg(this);
+        if (ts.getSettings().hasQueryProfiling()) {
+            qProfiling = new QueryProfiling(this);
+        }
+        if (ts.getSettings().hasQueryCache()) {
+            qCache = new QueryCacheSimple(this, qProfiling);
+        }
+
+        if (!"false".equals(Config.get().getProperty(Config.START_WEB_MI))) {
+            MindInspectorWeb.get().registerAg(this);
+        }
     }
-    
-    
-    /** parse and load the agent code, asSrc may be null */
+
+    /**
+     * parse and load the agent code, asSrc may be null
+     */
     public void initAg(String asSrc) throws JasonException {
         initAg();
         load(asSrc);
     }
-    
-    /** parse and load the agent code, asSrc may be null */
+
+    /**
+     * parse and load the agent code, asSrc may be null
+     */
     public void load(String asSrc) throws JasonException {
         // set the agent
         try {
@@ -176,7 +199,7 @@ public class Agent {
             if (asSrc != null) {
                 asSrc = asSrc.replaceAll("\\\\", "/");
                 setASLSrc(asSrc);
-    
+
                 if (asSrc.startsWith(Include.CRPrefix)) {
                     // loads the class from a jar file (for example)
                     parseAS(Agent.class.getResource(asSrc.substring(Include.CRPrefix.length())).openStream());
@@ -190,20 +213,20 @@ public class Agent {
                 }
             }
 
-            
             if (parsingOk) {
-                if (getPL().hasMetaEventPlans())
+                if (getPL().hasMetaEventPlans()) {
                     getTS().addGoalListener(new GoalListenerForMetaEvents(getTS()));
-                
+                }
+
                 addInitialBelsFromProjectInBB();
                 addInitialBelsInBB();
                 addInitialGoalsFromProjectInBB();
                 addInitialGoalsInTS();
                 fixAgInIAandFunctions(this); // used to fix agent reference in functions used inside includes
             }
-            
+
             // kqml Plans at the end of the ag PS
-            if (JasonException.class.getResource("/asl/kqmlPlans.asl") != null) { 
+            if (JasonException.class.getResource("/asl/kqmlPlans.asl") != null) {
                 setASLSrc("kqmlPlans.asl");
                 parseAS(JasonException.class.getResource("/asl/kqmlPlans.asl"));
                 setASLSrc(asSrc);
@@ -215,25 +238,26 @@ public class Agent {
             throw new JasonException("Error creating customised Agent class! - " + e);
         }
     }
-    
-    /** @deprecated Prefer the initAg method with only the source code of the agent as parameter.
-     *  
-     *  A call of this method like
-     *     <pre>
+
+    /**
+     * @deprecated Prefer the initAg method with only the source code of the
+     * agent as parameter.
+     *
+     * A call of this method like      <pre>
      *     TransitionSystem ts = ag.initAg(arch, bb, asSrc, stts)
-     *     </pre> 
-     *  can be replaced by
-     *     <pre>
+     * </pre> can be replaced by
+     * <pre>
      *     new TransitionSystem(ag, new Circumstance(), stts, arch);
      *     ag.setBB(bb); // only if you use a custom BB
      *     ag.initAg(asSrc);
      *     TransitionSystem ts = ag.getTS();
-     *     </pre> 
+     * </pre>
      */
     public TransitionSystem initAg(AgArch arch, BeliefBase bb, String asSrc, Settings stts) throws JasonException {
         try {
-            if (bb != null) 
+            if (bb != null) {
                 setBB(bb);
+            }
             new TransitionSystem(this, null, stts, arch);
             initAg(asSrc);
             return ts;
@@ -245,39 +269,43 @@ public class Agent {
 
     public void stopAg() {
         bb.stop();
-        if (qProfiling != null)
+        if (qProfiling != null) {
             qProfiling.show();
+        }
 
-        if (scheduler != null) 
+        if (scheduler != null) {
             scheduler.shutdownNow();
-        
-        for (InternalAction ia: internalActions.values())
+        }
+
+        for (InternalAction ia : internalActions.values()) {
             try {
                 ia.destroy();
             } catch (Exception e) {
                 e.printStackTrace();
-            }       
+            }
+        }
     }
-    
-    /** 
-     *  Clone BB, PL, Circumstance. 
-     *  A new TS is created (based on the cloned circumstance).
+
+    /**
+     * Clone BB, PL, Circumstance. A new TS is created (based on the cloned
+     * circumstance).
      */
     public Agent clone(AgArch arch) {
         Agent a = null;
         try {
             a = this.getClass().newInstance();
         } catch (InstantiationException e1) {
-            logger.severe(" cannot create derived class" +e1);
+            logger.severe(" cannot create derived class" + e1);
             return null;
         } catch (IllegalAccessException e2) {
-            logger.severe(" cannot create derived class" +e2);
+            logger.severe(" cannot create derived class" + e2);
             return null;
         }
-        
+
         a.setLogger(arch);
-        if (this.getTS().getSettings().verbose() >= 0)
+        if (this.getTS().getSettings().verbose() >= 0) {
             a.logger.setLevel(this.getTS().getSettings().logLevel());
+        }
 
         a.bb = this.bb.clone();
         a.pl = this.pl.clone();
@@ -289,81 +317,91 @@ public class Agent {
         a.aslSource = this.aslSource;
         a.internalActions = new HashMap<String, InternalAction>();
         a.setTS(new TransitionSystem(a, this.getTS().getC().clone(), this.getTS().getSettings(), arch));
-        if (a.getPL().hasMetaEventPlans())
+        if (a.getPL().hasMetaEventPlans()) {
             a.getTS().addGoalListener(new GoalListenerForMetaEvents(a.getTS()));
-        
+        }
+
         a.initAg(); //for initDefaultFunctions() and for overridden/custom agent 
         return a;
     }
-    
+
     private void fixAgInIAandFunctions(Agent a) throws Exception {
         // find all internal actions and functions and change the pointer for agent
-        for (Plan p: a.getPL()) {
+        for (Plan p : a.getPL()) {
             // search context
-            if (p.getContext() instanceof Literal)
-                fixAgInIAandFunctions(a, (Literal)p.getContext());
-            
+            if (p.getContext() instanceof Literal) {
+                fixAgInIAandFunctions(a, (Literal) p.getContext());
+            }
+
             // search body
-            if (p.getBody() instanceof Literal)
-                fixAgInIAandFunctions(a, (Literal)p.getBody());
+            if (p.getBody() instanceof Literal) {
+                fixAgInIAandFunctions(a, (Literal) p.getBody());
+            }
         }
     }
-    
+
     private void fixAgInIAandFunctions(Agent a, Literal l) throws Exception {
         // if l is internal action/function
         if (l instanceof InternalActionLiteral) {
-            ((InternalActionLiteral)l).setIA(null); // reset the IA in the literal, the IA there will be updated next getIA call
+            ((InternalActionLiteral) l).setIA(null); // reset the IA in the literal, the IA there will be updated next getIA call
         }
         if (l instanceof ArithFunctionTerm) {
-            ((ArithFunctionTerm)l).setAgent(a);
+            ((ArithFunctionTerm) l).setAgent(a);
         }
         if (l instanceof Rule) {
-            LogicalFormula f = ((Rule)l).getBody();
+            LogicalFormula f = ((Rule) l).getBody();
             if (f instanceof Literal) {
-                fixAgInIAandFunctions(a, (Literal)f);
+                fixAgInIAandFunctions(a, (Literal) f);
             }
         }
-        for (int i=0; i<l.getArity(); i++) {
-            if (l.getTerm(i) instanceof Literal)
-                fixAgInIAandFunctions(a, (Literal)l.getTerm(i));            
+        for (int i = 0; i < l.getArity(); i++) {
+            if (l.getTerm(i) instanceof Literal) {
+                fixAgInIAandFunctions(a, (Literal) l.getTerm(i));
+            }
         }
     }
 
     public void setLogger(AgArch arch) {
-        if (arch != null)
+        if (arch != null) {
             logger = Logger.getLogger(Agent.class.getName() + "." + arch.getAgName());
+        }
     }
 
     public Logger getLogger() {
         return logger;
     }
-    
+
     public ScheduledExecutorService getScheduler() {
-        if (scheduler == null)
+        if (scheduler == null) {
             scheduler = Executors.newScheduledThreadPool(2);
+        }
         return scheduler;
     }
-    
 
-    /** Returns the .asl file source used to create this agent */
+    /**
+     * Returns the .asl file source used to create this agent
+     */
     public String getASLSrc() {
         return aslSource;
     }
-    
+
     public void setASLSrc(String file) {
-        if (file != null && file.startsWith("./")) 
+        if (file != null && file.startsWith("./")) {
             file = file.substring(2);
-        aslSource = file;       
+        }
+        aslSource = file;
     }
 
-    /** Adds beliefs and plans form an URL */
+    /**
+     * Adds beliefs and plans form an URL
+     */
     public boolean parseAS(URL asURL) {
         try {
             parseAS(asURL.openStream());
             logger.fine("as2j: AgentSpeak program '" + asURL + "' parsed successfully!");
             return true;
         } catch (IOException e) {
-            logger.log(Level.SEVERE, "as2j: the AgentSpeak source file '"+asURL+"' was not found!");
+            logger.log(Level.SEVERE, "as2j: the AgentSpeak source file '" + asURL + "' was not found!");
         } catch (ParseException e) {
             logger.log(Level.SEVERE, "as2j: parsing error: " + e.getMessage());
         } catch (Exception e) {
@@ -372,14 +410,16 @@ public class Agent {
         return false;
     }
 
-    /** Adds beliefs and plans form a file */
+    /**
+     * Adds beliefs and plans form a file
+     */
     public boolean parseAS(File asFile) {
         try {
             parseAS(new FileInputStream(asFile));
             logger.fine("as2j: AgentSpeak program '" + asFile + "' parsed successfully!");
             return true;
         } catch (FileNotFoundException e) {
-            logger.log(Level.SEVERE, "as2j: the AgentSpeak source file '"+asFile+"' was not found!");
+            logger.log(Level.SEVERE, "as2j: the AgentSpeak source file '" + asFile + "' was not found!");
         } catch (ParseException e) {
             logger.log(Level.SEVERE, "as2j: parsing error:" + e.getMessage());
         } catch (Exception e) {
@@ -392,6 +432,7 @@ public class Agent {
         as2j parser = new as2j(asIn);
         parser.agent(this);
     }
+
     public void parseAS(Reader asIn) throws ParseException, JasonException {
         as2j parser = new as2j(asIn);
         parser.agent(this);
@@ -399,139 +440,172 @@ public class Agent {
 
     @SuppressWarnings("unchecked")
     public InternalAction getIA(String iaName) throws ClassNotFoundException, InstantiationException, IllegalAccessException {
-        if (iaName.charAt(0) == '.')
+        if (iaName.charAt(0) == '.') {
             iaName = "jason.stdlib" + iaName;
+        }
         InternalAction objIA = internalActions.get(iaName);
         if (objIA == null) {
             @SuppressWarnings("rawtypes")
             Class iaclass = Class.forName(iaName);
             try {
                 // check if the class has "create" method -- singleton implementation
-                Method create = iaclass.getMethod("create", (Class[])null);
-                objIA = (InternalAction)create.invoke(null, (Object[])null);
+                Method create = iaclass.getMethod("create", (Class[]) null);
+                objIA = (InternalAction) create.invoke(null, (Object[]) null);
             } catch (Exception e) {
-                objIA = (InternalAction)iaclass.newInstance();              
+                objIA = (InternalAction) iaclass.newInstance();
             }
             internalActions.put(iaName, objIA);
         }
         return objIA;
     }
-    
+
     public void initDefaultFunctions() {
-        if (functions == null)       
+        if (functions == null) {
             functions = new HashMap<String, ArithFunction>();
+        }
         addFunction(Count.class, false);
     }
- 
-    /** register an arithmetic function implemented in Java */
+
+    /**
+     * register an arithmetic function implemented in Java
+     */
     public void addFunction(Class<? extends ArithFunction> c) {
-        addFunction(c,true);
+        addFunction(c, true);
     }
-    /** register an arithmetic function implemented in Java */
+
+    /**
+     * register an arithmetic function implemented in Java
+     */
     private void addFunction(Class<? extends ArithFunction> c, boolean user) {
         try {
             ArithFunction af = c.newInstance();
             String error = null;
-            if (user)
+            if (user) {
                 error = FunctionRegister.checkFunctionName(af.getName());
-            if (error != null)
+            }
+            if (error != null) {
                 logger.warning(error);
-            else
-                functions.put(af.getName(),af);
+            } else {
+                functions.put(af.getName(), af);
+            }
         } catch (Exception e) {
-            logger.log(Level.SEVERE, "Error registering function "+c.getName(),e);
+            logger.log(Level.SEVERE, "Error registering function " + c.getName(), e);
         }
     }
-     
-    /** register an arithmetic function implemented in AS (by a rule, literal, or internal action) */
+
+    /**
+     * register an arithmetic function implemented in AS (by a rule, literal, or
+     * internal action)
+     */
     public void addFunction(String function, int arity, String literal) {
         try {
             String error = FunctionRegister.checkFunctionName(function);
-            if (error != null)
+            if (error != null) {
                 logger.warning(error);
-            else
+            } else {
                 functions.put(function, new RuleToFunction(literal, arity));
+            }
         } catch (Exception e) {
-            logger.log(Level.SEVERE, "Error registering function "+literal,e);
+            logger.log(Level.SEVERE, "Error registering function " + literal, e);
         }
     }
-    
-    /** get the object the implements the arithmetic function <i>function/arity</i>,  
-     *  either global (like math.max) or local (like .count).
+
+    /**
+     * get the object the implements the arithmetic function
+     * <i>function/arity</i>, either global (like math.max) or local (like
+     * .count).
      */
     public ArithFunction getFunction(String function, int arity) {
-        if (functions == null) return null;
-        ArithFunction af = functions.get(function);
-        if (af == null || !af.checkArity(arity))
-            // try global function
-            af = FunctionRegister.getFunction(function, arity);
-        if (af != null && af.checkArity(arity))
-            return af;
-        else 
+        if (functions == null) {
             return null;
+        }
+        ArithFunction af = functions.get(function);
+        if (af == null || !af.checkArity(arity)) // try global function
+        {
+            af = FunctionRegister.getFunction(function, arity);
+        }
+        if (af != null && af.checkArity(arity)) {
+            return af;
+        } else {
+            return null;
+        }
     }
 
-    /** Belief b will be stored to be included as an ordinary belief when the agent will start running.
-     *  This method is usually called by the parser; at compile time, when the TS may not be ready yet and thus
-     *  no events can be produced. Beliefs are then scheduled here to be definitely included later when the 
-     *  TS is ready. */
+    /**
+     * Belief b will be stored to be included as an ordinary belief when the
+     * agent will start running. This method is usually called by the parser; at
+     * compile time, when the TS may not be ready yet and thus no events can be
+     * produced. Beliefs are then scheduled here to be definitely included later
+     * when the TS is ready.
+     */
     public void addInitialBel(Literal b) {
         initialBels.add(b);
     }
+
     public List<Literal> getInitialBels() {
         return initialBels;
     }
-    
-    /** add the initial beliefs in BB and produce the corresponding events */
+
+    /**
+     * add the initial beliefs in BB and produce the corresponding events
+     */
     public void addInitialBelsInBB() throws RevisionFailedException {
         // Once beliefs are stored in a Stack in the BB, insert them in inverse order
-        for (int i=initialBels.size()-1; i >=0; i--) {
+        for (int i = initialBels.size() - 1; i >= 0; i--) {
             Literal b = initialBels.get(i);
 
             // if l is not a rule and has free vars (like l(X)), convert it into a rule like "l(X) :- true."
-            if (!b.isRule() && !b.isGround())
-                b = new Rule(b,Literal.LTrue);
+            if (!b.isRule() && !b.isGround()) {
+                b = new Rule(b, Literal.LTrue);
+            }
 
-            b = (Literal)b.capply(null); // to solve arithmetic expressions
-            
+            b = (Literal) b.capply(null); // to solve arithmetic expressions
+
             // does not do BRF for rules (and so do not produce events +bel for rules)
-            if (b.isRule())
+            if (b.isRule()) {
                 getBB().add(b);
-            else
+            } else {
                 addBel(b);
+            }
         }
         initialBels.clear();
     }
-    
+
     protected void addInitialBelsFromProjectInBB() {
         String sBels = getTS().getSettings().getUserParameter("beliefs");
         if (sBels != null) {
             try {
-                for (Term t: ASSyntax.parseList("["+sBels+"]")) {
-                    Literal b = ((Literal)t).forceFullLiteralImpl();
-                    if (!b.hasSource())
+                for (Term t : ASSyntax.parseList("[" + sBels + "]")) {
+                    Literal b = ((Literal) t).forceFullLiteralImpl();
+                    if (!b.hasSource()) {
                         b.addAnnot(BeliefBase.TSelf);
+                    }
                     getBB().add(b);
                 }
             } catch (Exception e) {
-                logger.log(Level.WARNING, "Initial beliefs from project '["+sBels+"]' is not a list of literals.");
+                logger.log(Level.WARNING, "Initial beliefs from project '[" + sBels + "]' is not a list of literals.");
             }
         }
     }
 
-    
-    /** goal g will be stored to be included as an initial goal when the agent will start running */
+    /**
+     * goal g will be stored to be included as an initial goal when the agent
+     * will start running
+     */
     public void addInitialGoal(Literal g) {
         initialGoals.add(g);
     }
-    
-    /** includes all initial goals in the agent reasoner */
+
+    /**
+     * includes all initial goals in the agent reasoner
+     */
     public void addInitialGoalsInTS() {
-        for (Literal g: initialGoals) {
+        for (Literal g : initialGoals) {
             g.makeVarsAnnon();
-            if (! g.hasSource())
+            if (!g.hasSource()) {
                 g.addAnnot(BeliefBase.TSelf);
-            getTS().getC().addAchvGoal(g,Intention.EmptyInt);            
+            }
+            getTS().getC().addAchvGoal(g, Intention.EmptyInt);
         }
     }
 
@@ -539,47 +613,52 @@ public class Agent {
         String sGoals = getTS().getSettings().getUserParameter("goals");
         if (sGoals != null) {
             try {
-                for (Term t: ASSyntax.parseList("["+sGoals+"]")) {
-                    Literal g = (Literal)t;
+                for (Term t : ASSyntax.parseList("[" + sGoals + "]")) {
+                    Literal g = (Literal) t;
                     g.makeVarsAnnon();
-                    if (! g.hasSource())
+                    if (!g.hasSource()) {
                         g.addAnnot(BeliefBase.TSelf);
-                    getTS().getC().addAchvGoal(g,Intention.EmptyInt);            
+                    }
+                    getTS().getC().addAchvGoal(g, Intention.EmptyInt);
                 }
             } catch (Exception e) {
-                logger.log(Level.WARNING, "Initial goals from project '["+sGoals+"]' is not a list of literals.");
+                logger.log(Level.WARNING, "Initial goals from project '[" + sGoals + "]' is not a list of literals.");
             }
         }
     }
 
-    
-    /** Imports beliefs, plans and initial goals from another agent. Initial beliefs and goals 
-     *  are stored in "initialBels" and "initialGoals" lists but not included in the BB / TS.
-     *  The methods addInitialBelsInBB and addInitialGoalsInTS should be called in the sequel to
-     *  add those beliefs and goals into the agent. */
+    /**
+     * Imports beliefs, plans and initial goals from another agent. Initial
+     * beliefs and goals are stored in "initialBels" and "initialGoals" lists
+     * but not included in the BB / TS. The methods addInitialBelsInBB and
+     * addInitialGoalsInTS should be called in the sequel to add those beliefs
+     * and goals into the agent.
+     */
     public void importComponents(Agent a) throws JasonException {
         if (a != null) {
-            for (Literal b: a.initialBels) {
+            for (Literal b : a.initialBels) {
                 this.addInitialBel(b);
                 try {
-                    fixAgInIAandFunctions(this,b);
+                    fixAgInIAandFunctions(this, b);
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
             }
-            
-            for (Literal g: a.initialGoals) 
-                this.addInitialGoal(g);
-            
-            for (Plan p: a.getPL()) 
-                this.getPL().add(p, false);
 
-            if (getPL().hasMetaEventPlans())
+            for (Literal g : a.initialGoals) {
+                this.addInitialGoal(g);
+            }
+
+            for (Plan p : a.getPL()) {
+                this.getPL().add(p, false);
+            }
+
+            if (getPL().hasMetaEventPlans()) {
                 getTS().addGoalListener(new GoalListenerForMetaEvents(getTS()));
+            }
         }
     }
-    
-    
+
     /**
      * Follows the default implementation for the agent's message acceptance
      * relation and selection functions
@@ -588,13 +667,15 @@ public class Agent {
         return true;
     }
 
-    /** Returns true if this agent accepts to be killed by another agent called <i>agName</i>.
-     *  This method can be overridden to customize this option. */
+    /**
+     * Returns true if this agent accepts to be killed by another agent called
+     * <i>agName</i>. This method can be overridden to customize this option.
+     */
     public boolean killAcc(String agName) {
         //System.out.println("I am being killed by "+agName+", but that is ok...");
         return true;
     }
-    
+
     public Event selectEvent(Queue<Event> events) {
         // make sure the selected Event is removed from 'events' queue
         return events.poll();
@@ -630,17 +711,20 @@ public class Agent {
                     i.remove();
                     return a;
                 }
-            }           
+            }
         }
         return null;
     }
 
-    /** TS Initialisation (called by the AgArch) */
+    /**
+     * TS Initialisation (called by the AgArch)
+     */
     public void setTS(TransitionSystem ts) {
         this.ts = ts;
         setLogger(ts.getUserAgArch());
-        if (ts.getSettings().verbose() >= 0)
-            logger.setLevel(ts.getSettings().logLevel());        
+        if (ts.getSettings().verbose() >= 0) {
+            logger.setLevel(ts.getSettings().logLevel());
+        }
     }
 
     public TransitionSystem getTS() {
@@ -650,6 +734,7 @@ public class Agent {
     public void setBB(BeliefBase bb) {
         this.bb = bb;
     }
+
     public BeliefBase getBB() {
         return bb;
     }
@@ -657,42 +742,72 @@ public class Agent {
     public void setPL(PlanLibrary pl) {
         this.pl = pl;
     }
-    
+
     public PlanLibrary getPL() {
         return pl;
     }
 
-    /** Belief Update Function: adds/removes percepts into belief base */
+    /**
+     * Belief Update Function: adds/removes percepts into belief base
+     */
     public void buf(List<Literal> percepts) {
+
+        System.out.println("Percepts in BB:");
+
+        if (priorityLimit == Integer.MAX_VALUE) {
+            Iterator<Literal> inBB = getBB().iterator();
+            while (inBB.hasNext()) {
+                Literal ll = inBB.next();
+                if (ll.toString().contains("priorityLimit")) {
+                    priorityLimit = Integer.parseInt(ll.getTerm(0).toString());
+                    System.out.println(priorityLimit);
+                    usingPriority = true;
+                }
+            }
+        }
+        if (percepts != null && usingPriority) {
+            Iterator<Literal> ip2 = percepts.iterator();
+            while (ip2.hasNext()) {
+                Literal t = ip2.next();
+                ListTerm list = t.getAnnots("priority");
+                if (list.toString().contains("priority")) {
+                    int number = Integer.parseInt(list.toString().split("\\(")[1].split("\\)")[0]);
+                    if (number < priorityLimit) {
+                        ip2.remove();
+                    }
+                }
+            }
+        }
         if (percepts == null) {
             return;
         }
-        
+
         // stat
         int adds = 0;
-        int dels = 0;        
+        int dels = 0;
         long startTime = qProfiling == null ? 0 : System.nanoTime();
 
         // deleting percepts in the BB that is not perceived anymore
         Iterator<Literal> perceptsInBB = getBB().getPercepts();
-        while (perceptsInBB.hasNext()) { 
+        while (perceptsInBB.hasNext()) {
             Literal l = perceptsInBB.next();
-
+            System.out.println(l);
             // could not use percepts.contains(l), since equalsAsTerm must be
             // used (to ignore annotations)
             boolean wasPerceived = false;
             Iterator<Literal> ip = percepts.iterator();
             while (ip.hasNext()) {
                 Literal t = ip.next();
-                
+
                 // if perception t is already in BB
                 if (l.equalsAsStructure(t) && l.negated() == t.negated()) {
                     wasPerceived = true;
                     // remove in percepts, since it already is in BB 
                     // [can not be always removed, since annots in this percepts should be added in BB
                     //  Jason team for AC, for example, use annots in perceptions]
-                    if (!l.hasAnnot())
+                    if (!l.hasAnnot()) {
                         ip.remove();
+                    }
                     break;
                 }
             }
@@ -700,7 +815,7 @@ public class Agent {
                 dels++;
                 // new version (it is sure that l is in BB, only clone l when the event is relevant)
                 perceptsInBB.remove(); // remove l as perception from BB
-                
+
                 Trigger te = new Trigger(TEOperator.del, TEType.belief, l);
                 if (ts.getC().hasListener() || pl.hasCandidatePlan(te)) {
                     l = l.copy();
@@ -709,23 +824,25 @@ public class Agent {
                     te.setLiteral(l);
                     ts.getC().addEvent(new Event(te, Intention.EmptyInt));
                 }
-        
+
                 /*
-                // old version
-                // can not delete l, but l[source(percept)]
-                l = (Literal)l.clone();
-                l.clearAnnots();
-                l.addAnnot(BeliefBase.TPercept);
-                if (bb.remove(l)) {
-                    ts.updateEvents(new Event(new Trigger(TEOperator.del, TEType.belief, l), Intention.EmptyInt));
-                }
-                */
+                 // old version
+                 // can not delete l, but l[source(percept)]
+                 l = (Literal)l.clone();
+                 l.clearAnnots();
+                 l.addAnnot(BeliefBase.TPercept);
+                 if (bb.remove(l)) {
+                 ts.updateEvents(new Event(new Trigger(TEOperator.del, TEType.belief, l), Intention.EmptyInt));
+                 }
+                 */
             }
         }
+        System.out.println("Percepts");
 
         // BUF only adds a belief when appropriate
         // checking all percepts for new beliefs
         for (Literal lp : percepts) {
+            System.out.println(lp);
             try {
                 lp = lp.copy().forceFullLiteralImpl();
                 lp.addAnnot(BeliefBase.TPercept);
@@ -738,23 +855,27 @@ public class Agent {
                 logger.log(Level.SEVERE, "Error adding percetion " + lp, e);
             }
         }
-        
-        if (qCache != null)
+
+        if (qCache != null) {
             qCache.reset();
-        if (qProfiling != null)
-            qProfiling.newUpdateCycle(getTS().getUserAgArch().getCycleNumber(), adds+dels, System.nanoTime()-startTime);
+        }
+        if (qProfiling != null) {
+            qProfiling.newUpdateCycle(getTS().getUserAgArch().getCycleNumber(), adds + dels, System.nanoTime() - startTime);
+        }
+        System.out.println("End of Percepts");
     }
 
     public QueryCacheSimple getQueryCache() {
         return qCache;
     }
+
     public QueryProfiling getQueryProfiling() {
         return qProfiling;
     }
-    
+
     /**
-     * Returns true if BB contains the literal <i>bel</i> (using unification to test).
-     * The unifier <i>un</i> is updated by the method.
+     * Returns true if BB contains the literal <i>bel</i> (using unification to
+     * test). The unifier <i>un</i> is updated by the method.
      */
     public boolean believes(LogicalFormula bel, Unifier un) {
         try {
@@ -764,17 +885,17 @@ public class Agent {
                 return true;
             }
         } catch (Exception e) {
-            logger.log(Level.SEVERE, "** Error in method believes("+bel+","+un+").",e);
+            logger.log(Level.SEVERE, "** Error in method believes(" + bel + "," + un + ").", e);
         }
         return false;
     }
 
     /**
      * Find a literal in BB using unification to test.
-     * 
-     * Returns the belief as it is in BB, e.g. findBel(a(_),...) 
-     * may returns a(10)[source(ag)].
-     *   
+     *
+     * Returns the belief as it is in BB, e.g. findBel(a(_),...) may returns
+     * a(10)[source(ag)].
+     *
      * The unifier <i>un</i> is updated by the method.
      */
     public Literal findBel(Literal bel, Unifier un) {
@@ -782,61 +903,65 @@ public class Agent {
         if (relB != null) {
             while (relB.hasNext()) {
                 Literal b = relB.next();
-                
+
                 // recall that order is important because of annotations!
                 if (!b.isRule() && un.unifies(bel, b)) {
                     return b;
                 }
             }
-        } 
+        }
         return null;
     }
 
-    
     /**
      * This function should revise the belief base with the given literal to
      * add, to remove, and the current intention that triggered the operation.
-     * 
-     * <p>In its return, List[0] has the list of actual additions to
-     * the belief base, and List[1] has the list of actual deletions;
-     * this is used to generate the appropriate internal events. If
-     * nothing change, returns null.
+     *
+     * <p>
+     * In its return, List[0] has the list of actual additions to the belief
+     * base, and List[1] has the list of actual deletions; this is used to
+     * generate the appropriate internal events. If nothing change, returns
+     * null.
      */
-    public List<Literal>[] brf(Literal beliefToAdd, Literal beliefToDel,  Intention i) throws RevisionFailedException {
+    public List<Literal>[] brf(Literal beliefToAdd, Literal beliefToDel, Intention i) throws RevisionFailedException {
         return brf(beliefToAdd, beliefToDel, i, false);
     }
-    
+
     /**
      * This function should revise the belief base with the given literal to
      * add, to remove, and the current intention that triggered the operation.
-     * 
-     * <p>In its return, List[0] has the list of actual additions to
-     * the belief base, and List[1] has the list of actual deletions;
-     * this is used to generate the appropriate internal events. If
-     * nothing change, returns null.
+     *
+     * <p>
+     * In its return, List[0] has the list of actual additions to the belief
+     * base, and List[1] has the list of actual deletions; this is used to
+     * generate the appropriate internal events. If nothing change, returns
+     * null.
      */
     @SuppressWarnings("unchecked")
-    public List<Literal>[] brf(Literal beliefToAdd, Literal beliefToDel,  Intention i, boolean addEnd) throws RevisionFailedException {
+    public List<Literal>[] brf(Literal beliefToAdd, Literal beliefToDel, Intention i, boolean addEnd) throws RevisionFailedException {
         // This class does not implement belief revision! It
         // is supposed that a subclass will do it.
         // It simply add/del the belief.
 
         int position = 0; // add in the begin
-        if (addEnd)
+        if (addEnd) {
             position = 1;
-        
+        }
+
         List<Literal>[] result = null;
         try {
             if (beliefToAdd != null) {
-                if (logger.isLoggable(Level.FINE)) logger.fine("Doing (add) brf for " + beliefToAdd);
-                
+                if (logger.isLoggable(Level.FINE)) {
+                    logger.fine("Doing (add) brf for " + beliefToAdd);
+                }
+
                 if (getBB().add(position, beliefToAdd)) {
                     result = new List[2];
                     result[0] = Collections.singletonList(beliefToAdd);
                     result[1] = Collections.emptyList();
                 }
             }
-    
+
             if (beliefToDel != null) {
                 Unifier u = null;
                 try {
@@ -844,36 +969,40 @@ public class Agent {
                 } catch (Exception e) {
                     u = new Unifier();
                 }
-    
-                if (logger.isLoggable(Level.FINE)) logger.fine("Doing (del) brf for " + beliefToDel + " in BB=" + believes(beliefToDel, u));
-                
+
+                if (logger.isLoggable(Level.FINE)) {
+                    logger.fine("Doing (del) brf for " + beliefToDel + " in BB=" + believes(beliefToDel, u));
+                }
+
                 boolean removed = getBB().remove(beliefToDel);
                 if (!removed && !beliefToDel.isGround()) { // then try to unify the parameter with a belief in BB
                     if (believes(beliefToDel, u)) {
-                        beliefToDel = (Literal)beliefToDel.capply(u);        
+                        beliefToDel = (Literal) beliefToDel.capply(u);
                         removed = getBB().remove(beliefToDel);
                     }
                 }
-                    
+
                 if (removed) {
-                    if (logger.isLoggable(Level.FINE)) logger.fine("Removed:" + beliefToDel);
+                    if (logger.isLoggable(Level.FINE)) {
+                        logger.fine("Removed:" + beliefToDel);
+                    }
                     if (result == null) {
                         result = new List[2];
                         result[0] = Collections.emptyList();
                     }
-                    result[1] = Collections.singletonList(beliefToDel);                    
+                    result[1] = Collections.singletonList(beliefToDel);
                 }
             }
         } catch (Exception e) {
-            logger.log(Level.WARNING, "Error at BRF.",e);
+            logger.log(Level.WARNING, "Error at BRF.", e);
         }
         return result;
     }
 
     /**
-     * Adds <i>bel</i> in belief base (calling brf) and generates the
-     * events. If <i>bel</i> has no source, add
-     * <code>source(self)</code>. (the belief is not cloned!)
+     * Adds <i>bel</i> in belief base (calling brf) and generates the events. If
+     * <i>bel</i> has no source, add <code>source(self)</code>. (the belief is
+     * not cloned!)
      */
     public boolean addBel(Literal bel) throws RevisionFailedException {
         if (!bel.hasSource()) {
@@ -889,8 +1018,8 @@ public class Agent {
     }
 
     /**
-     * If the agent believes in <i>bel</i>, removes it (calling brf)
-     * and generate the event.
+     * If the agent believes in <i>bel</i>, removes it (calling brf) and
+     * generate the event.
      */
     public boolean delBel(Literal bel) throws RevisionFailedException {
         if (!bel.hasSource()) {
@@ -904,13 +1033,16 @@ public class Agent {
             return false;
         }
     }
-    
-    /** Removes all occurrences of <i>bel</i> in BB. 
-        If <i>un</i> is null, an empty Unifier is used. 
+
+    /**
+     * Removes all occurrences of <i>bel</i> in BB. If <i>un</i> is null, an
+     * empty Unifier is used.
      */
     public void abolish(Literal bel, Unifier un) throws RevisionFailedException {
         List<Literal> toDel = new ArrayList<Literal>();
-        if (un == null) un = new Unifier();
+        if (un == null) {
+            un = new Unifier();
+        }
         Iterator<Literal> il = getBB().getCandidateBeliefs(bel, un);
         if (il != null) {
             while (il.hasNext()) {
@@ -923,28 +1055,30 @@ public class Agent {
                 }
             }
         }
-        
-        for (Literal l: toDel) {
+
+        for (Literal l : toDel) {
             delBel(l);
         }
     }
 
     private void checkCustomSelectOption() {
         hasCustomSelOp = false;
-        for (Method m: this.getClass().getMethods()) {
+        for (Method m : this.getClass().getMethods()) {
             if (!m.getDeclaringClass().equals(Agent.class) && m.getName().equals("selectOption")) {
                 hasCustomSelOp = true;
             }
         }
     }
-    
+
     public boolean hasCustomSelectOption() {
         return hasCustomSelOp;
     }
-    
+
     static DocumentBuilder builder = null;
 
-    /** Gets the agent "mind" (beliefs, plans, and circumstance) as XML */
+    /**
+     * Gets the agent "mind" (beliefs, plans, and circumstance) as XML
+     */
     public Document getAgState() {
         if (builder == null) {
             try {
@@ -966,21 +1100,25 @@ public class Agent {
 
     @Override
     public String toString() {
-        return "Agent "+getASLSrc();
+        return "Agent " + getASLSrc();
     }
-    
-    /** Gets the agent "mind" as XML */
+
+    /**
+     * Gets the agent "mind" as XML
+     */
     public Element getAsDOM(Document document) {
         Element ag = (Element) document.createElement("agent");
         ag.setAttribute("name", ts.getUserAgArch().getAgName());
-        ag.setAttribute("cycle", ""+ts.getUserAgArch().getCycleNumber());
+        ag.setAttribute("cycle", "" + ts.getUserAgArch().getCycleNumber());
 
         ag.appendChild(bb.getAsDOM(document));
         // ag.appendChild(ps.getAsDOM(document));
         return ag;
     }
 
-    /** Gets the agent program (Beliefs and plans) as XML */
+    /**
+     * Gets the agent program (Beliefs and plans) as XML
+     */
     public Document getAgProgram() {
         if (builder == null) {
             try {

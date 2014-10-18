@@ -1,0 +1,297 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://www.netbeans.org/ns/project/1">
+    <type>org.netbeans.modules.ant.freeform</type>
+    <configuration>
+        <general-data xmlns="http://www.netbeans.org/ns/freeform-project/1">
+            <name>Jason</name>
+        </general-data>
+        <general-data xmlns="http://www.netbeans.org/ns/freeform-project/2">
+            <!-- Não usar personalizador das Propriedades do Projeto ao editar este arquivo manualmente. 
+ Para impedir que o personalizador seja exibido, crie o arquivo nbproject/project.properties e digite a propriedade
+auxiliary.show.customizer=false 
+lá. Adicionar 
+auxiliary.show.customizer.message=<message>
+ mostrará sua mensagem personalizada quando alguém tentar abrir o personalizador.  -->
+            <name>Jason</name>
+            <properties>
+                <property name="project.dir">jason</property>
+                <property name="ant.script">${project.dir}/../../build.xml</property>
+            </properties>
+            <folders>
+                <source-folder>
+                    <label>..</label>
+                    <location>${project.dir}/..</location>
+                </source-folder>
+                <source-folder>
+                    <label>jason</label>
+                    <location>${project.dir}</location>
+                </source-folder>
+                <source-folder>
+                    <label>Jason</label>
+                    <location>.</location>
+                    <encoding>UTF-8</encoding>
+                </source-folder>
+                <source-folder>
+                    <label>..</label>
+                    <type>java</type>
+                    <location>${project.dir}/..</location>
+                    <encoding>UTF-8</encoding>
+                </source-folder>
+                <source-folder>
+                    <label>architecture</label>
+                    <type>java</type>
+                    <location>${project.dir}/architecture</location>
+                    <encoding>UTF-8</encoding>
+                </source-folder>
+                <source-folder>
+                    <label>asSemantics</label>
+                    <type>java</type>
+                    <location>${project.dir}/asSemantics</location>
+                    <encoding>UTF-8</encoding>
+                </source-folder>
+                <source-folder>
+                    <label>asSyntax</label>
+                    <type>java</type>
+                    <location>${project.dir}/asSyntax</location>
+                    <encoding>UTF-8</encoding>
+                </source-folder>
+                <source-folder>
+                    <label>bb</label>
+                    <type>java</type>
+                    <location>${project.dir}/bb</location>
+                    <encoding>UTF-8</encoding>
+                </source-folder>
+                <source-folder>
+                    <label>control</label>
+                    <type>java</type>
+                    <location>${project.dir}/control</location>
+                    <encoding>UTF-8</encoding>
+                </source-folder>
+                <source-folder>
+                    <label>environment</label>
+                    <type>java</type>
+                    <location>${project.dir}/environment</location>
+                    <encoding>UTF-8</encoding>
+                </source-folder>
+                <source-folder>
+                    <label>functions</label>
+                    <type>java</type>
+                    <location>${project.dir}/functions</location>
+                    <encoding>UTF-8</encoding>
+                </source-folder>
+                <source-folder>
+                    <label>infra</label>
+                    <type>java</type>
+                    <location>${project.dir}/infra</location>
+                    <encoding>UTF-8</encoding>
+                </source-folder>
+                <source-folder>
+                    <label>jeditplugin</label>
+                    <type>java</type>
+                    <location>${project.dir}/jeditplugin</location>
+                    <encoding>UTF-8</encoding>
+                </source-folder>
+                <source-folder>
+                    <label>mas2j</label>
+                    <type>java</type>
+                    <location>${project.dir}/mas2j</location>
+                    <encoding>UTF-8</encoding>
+                </source-folder>
+                <source-folder>
+                    <label>profiling</label>
+                    <type>java</type>
+                    <location>${project.dir}/profiling</location>
+                    <encoding>UTF-8</encoding>
+                </source-folder>
+                <source-folder>
+                    <label>runtime</label>
+                    <type>java</type>
+                    <location>${project.dir}/runtime</location>
+                    <encoding>UTF-8</encoding>
+                </source-folder>
+                <source-folder>
+                    <label>stdlib</label>
+                    <type>java</type>
+                    <location>${project.dir}/stdlib</location>
+                    <encoding>UTF-8</encoding>
+                </source-folder>
+                <source-folder>
+                    <label>util</label>
+                    <type>java</type>
+                    <location>${project.dir}/util</location>
+                    <encoding>UTF-8</encoding>
+                </source-folder>
+            </folders>
+            <ide-actions>
+                <action name="build">
+                    <script>${ant.script}</script>
+                    <target>compile</target>
+                </action>
+                <action name="clean">
+                    <script>${ant.script}</script>
+                    <target>clean</target>
+                </action>
+                <action name="javadoc">
+                    <script>${ant.script}</script>
+                    <target>apidoc</target>
+                </action>
+                <action name="run">
+                    <script>${ant.script}</script>
+                    <target>run</target>
+                </action>
+                <action name="test">
+                    <script>${ant.script}</script>
+                    <target>test</target>
+                </action>
+                <action name="rebuild">
+                    <script>${ant.script}</script>
+                    <target>clean</target>
+                    <target>compile</target>
+                </action>
+                <action name="debug">
+                    <script>nbproject/ide-targets.xml</script>
+                    <target>debug-nb</target>
+                </action>
+            </ide-actions>
+            <view>
+                <items>
+                    <source-folder style="packages">
+                        <label>..</label>
+                        <location>${project.dir}/..</location>
+                    </source-folder>
+                    <source-folder style="packages">
+                        <label>architecture</label>
+                        <location>${project.dir}/architecture</location>
+                    </source-folder>
+                    <source-folder style="packages">
+                        <label>asSemantics</label>
+                        <location>${project.dir}/asSemantics</location>
+                    </source-folder>
+                    <source-folder style="packages">
+                        <label>asSyntax</label>
+                        <location>${project.dir}/asSyntax</location>
+                    </source-folder>
+                    <source-folder style="packages">
+                        <label>bb</label>
+                        <location>${project.dir}/bb</location>
+                    </source-folder>
+                    <source-folder style="packages">
+                        <label>control</label>
+                        <location>${project.dir}/control</location>
+                    </source-folder>
+                    <source-folder style="packages">
+                        <label>environment</label>
+                        <location>${project.dir}/environment</location>
+                    </source-folder>
+                    <source-folder style="packages">
+                        <label>functions</label>
+                        <location>${project.dir}/functions</location>
+                    </source-folder>
+                    <source-folder style="packages">
+                        <label>infra</label>
+                        <location>${project.dir}/infra</location>
+                    </source-folder>
+                    <source-folder style="packages">
+                        <label>jeditplugin</label>
+                        <location>${project.dir}/jeditplugin</location>
+                    </source-folder>
+                    <source-folder style="packages">
+                        <label>mas2j</label>
+                        <location>${project.dir}/mas2j</location>
+                    </source-folder>
+                    <source-folder style="packages">
+                        <label>profiling</label>
+                        <location>${project.dir}/profiling</location>
+                    </source-folder>
+                    <source-folder style="packages">
+                        <label>runtime</label>
+                        <location>${project.dir}/runtime</location>
+                    </source-folder>
+                    <source-folder style="packages">
+                        <label>stdlib</label>
+                        <location>${project.dir}/stdlib</location>
+                    </source-folder>
+                    <source-folder style="packages">
+                        <label>util</label>
+                        <location>${project.dir}/util</location>
+                    </source-folder>
+                    <source-file>
+                        <location>${ant.script}</location>
+                    </source-file>
+                </items>
+                <context-menu>
+                    <ide-action name="build"/>
+                    <ide-action name="rebuild"/>
+                    <ide-action name="clean"/>
+                    <ide-action name="javadoc"/>
+                    <ide-action name="run"/>
+                    <ide-action name="test"/>
+                    <ide-action name="debug"/>
+                </context-menu>
+            </view>
+            <subprojects/>
+        </general-data>
+        <java-data xmlns="http://www.netbeans.org/ns/freeform-project-java/4">
+            <compilation-unit>
+                <package-root>${project.dir}/..</package-root>
+                <source-level>1.8</source-level>
+            </compilation-unit>
+            <compilation-unit>
+                <package-root>${project.dir}/architecture</package-root>
+                <source-level>1.8</source-level>
+            </compilation-unit>
+            <compilation-unit>
+                <package-root>${project.dir}/asSemantics</package-root>
+                <source-level>1.8</source-level>
+            </compilation-unit>
+            <compilation-unit>
+                <package-root>${project.dir}/asSyntax</package-root>
+                <source-level>1.8</source-level>
+            </compilation-unit>
+            <compilation-unit>
+                <package-root>${project.dir}/bb</package-root>
+                <source-level>1.8</source-level>
+            </compilation-unit>
+            <compilation-unit>
+                <package-root>${project.dir}/control</package-root>
+                <source-level>1.8</source-level>
+            </compilation-unit>
+            <compilation-unit>
+                <package-root>${project.dir}/environment</package-root>
+                <source-level>1.8</source-level>
+            </compilation-unit>
+            <compilation-unit>
+                <package-root>${project.dir}/functions</package-root>
+                <source-level>1.8</source-level>
+            </compilation-unit>
+            <compilation-unit>
+                <package-root>${project.dir}/infra</package-root>
+                <source-level>1.8</source-level>
+            </compilation-unit>
+            <compilation-unit>
+                <package-root>${project.dir}/jeditplugin</package-root>
+                <source-level>1.8</source-level>
+            </compilation-unit>
+            <compilation-unit>
+                <package-root>${project.dir}/mas2j</package-root>
+                <source-level>1.8</source-level>
+            </compilation-unit>
+            <compilation-unit>
+                <package-root>${project.dir}/profiling</package-root>
+                <source-level>1.8</source-level>
+            </compilation-unit>
+            <compilation-unit>
+                <package-root>${project.dir}/runtime</package-root>
+                <source-level>1.8</source-level>
+            </compilation-unit>
+            <compilation-unit>
+                <package-root>${project.dir}/stdlib</package-root>
+                <source-level>1.8</source-level>
+            </compilation-unit>
+            <compilation-unit>
+                <package-root>${project.dir}/util</package-root>
+                <source-level>1.8</source-level>
+            </compilation-unit>
+        </java-data>
+    </configuration>
+</project>

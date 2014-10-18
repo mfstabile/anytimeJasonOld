@@ -61,7 +61,7 @@ public class BlocksWorld extends jason.environment.Environment {
         clearPercepts("agent");
         for (Stack<String> s : model.getStacks()) {
             for (int i=1; i<s.size(); i++) {
-                addPercept("agent", Literal.parseLiteral("on("+s.get(i)+","+s.get(i-1)+")"));
+                addPercept("agent", Literal.parseLiteral("on("+s.get(i)+","+s.get(i-1)+")[priority(5)]"));
             }
         }
     }

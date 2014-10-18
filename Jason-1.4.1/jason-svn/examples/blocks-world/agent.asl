@@ -2,6 +2,7 @@
 
 /* Initial beliefs and rules */
 clear(table).
+priorityLimit(6).
 clear(X) :- not(on(_,X)).
 tower([X]) :- on(X,table).
 tower([X,Y|T]) :- on(X,Y) & tower([Y|T]).
